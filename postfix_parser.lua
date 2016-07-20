@@ -4,8 +4,9 @@
 ]]
 
 
--- ARRGH GLOBAL
-DEBUG = true
+-- ARRGH GLOBALS
+DEBUG = false
+TEST = false
 
 function printTable(name, someTable)
   if DEBUG then print(name .. ": " .. table.concat(someTable, ",") .. ".\n") end 
@@ -15,15 +16,6 @@ end
 --[[
   Functions concerned with loading in the expression information
 ]]
-
-function loadFileReturnFirstLine(filename)
-  local firstLine
-  for line in io.lines(filename) do
-    firstLine = line
-    break
-  end
-  return firstLine
-end
 
 function tokeniseExpression(line)
   local tokens = {}
@@ -204,4 +196,17 @@ function testExpressions()
   end 
 end
 
-testExpressions()
+if TEST then 
+  testExpressions() 
+else
+  if #arg then
+    for i, v in ipairs(arg) do
+      if i > 0 then
+        local result  = evaluateExpression(tokeniseExpression(v))
+        print(v .. " evaluates to : " .. tostring(result))
+      end 
+    end
+  end
+end
+
+
