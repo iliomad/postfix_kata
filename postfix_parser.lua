@@ -1,34 +1,20 @@
 --[[
   First Lua progam in a quite a while.
   Purpose: Parse and evaluate a boolean postfix expression
-  Outline:
-  - Read in the line that specifies the expression;
-  - Tokenise it;
-  - Evaluate it;
-
-  Data structure:
-  - Stack;
-  - Modelled using array;
-  - Tokenised string becomes an array;
-  - Top of stack is index 1.
-  - Stack contains operands and operators
-  - So, I need to know if something is one or the other
-  - Assuming correctly formed expressions
-  - Pop from stack until operator reached.
-  - Then apply the operator to the popped operators
-  - Push the output of the operation (and any unused operators) back onto the stack
-  - Yuck. There are far cleaner implementations. Could look them up, but that would spoil the fun.
-
-
-  Code Structure:
-  - Hmmmm. Need to read in file containing the expressions.
-  - Iterate over the lines.
-  - Tokenise each line, populating an array for each line. 
-  - But each entry into the array needs to be identified as an operator or operand.
-  - Simple solution. If it's a 0 or 1 then it's an operand. 
-  - For operators, I need to know their arity and effect (but not till evaluation time)
 ]]
 
+
+-- ARRGH GLOBAL
+DEBUG = true
+
+function printTable(name, someTable)
+  if DEBUG then print(name .. ": " .. table.concat(someTable, ",") .. ".\n") end 
+end
+
+
+--[[
+  Functions concerned with loading in the expression information
+]]
 
 function loadFileReturnFirstLine(filename)
   local firstLine
@@ -39,39 +25,105 @@ function loadFileReturnFirstLine(filename)
   return firstLine
 end
 
-
 function tokeniseExpression(line)
   local tokens = {}
   for word in line:gmatch("%S+") do
-    local token = {}
-    if (tonumber(word) == 0 or tonumber(word) == 1) then
-      token.type = "operand"
-    else
-      token.type = "operator"
-    end
-    token.value = word
-    table.insert(tokens, token)
+    table.insert(tokens, word)
   end
   return tokens
 end
 
-function popToOperator(expression)
-  local popped = {}
-  for _, token in ipairs(expression) do
-    if token.type == "operand" then
-      popped[#popped+1] = token
+
+--[[
+  The loaded expression is modelled as a stack.
+  These functions manipulate the stack to evaluate expressions.
+]]
+
+function evaluateExpression(stack)
+  printTable("Current stack", stack)
+  if #stack == 1 then
+    local result = stack[1]
+    if result == 0 then
+      return false
+    else
+      return true
     end
-    if token.type == "operator" then
-      popped[#popped+1] = token
+  else
+    local poppedStack, subexpression = popToOperator(stack)
+    local result = evaluateSubexpression(subexpression)
+    local newStack = pushToStack(poppedStack, result)
+    return evaluateExpression(newStack)
+  end
+end
+
+function popToOperator(stack)
+  local subexp = {}
+  local poppedTo = 1
+  for stackPosition, token in ipairs(stack) do
+    poppedTo = stackPosition
+    subexp[#subexp+1] = token
+    if tokenType(token) == "operator" then
       break
     end
   end
-  return popped
+
+  local poppedStack = {}
+  for i=poppedTo+1,#stack do
+    poppedStack[#poppedStack+1] = stack[i]
+  end
+
+  printTable("Popped stack", poppedStack)
+  printTable("Subexpression", subexp)
+
+  return poppedStack, subexp
 end
 
-function evaluate(subexp)
+function evaluateSubexpression(subexp)
 	local operator = subexp[#subexp]
-	
+  local numArgs = operatorArity(operator)
+  local args = {}
+  for i=1,numArgs do
+    args[i] = subexp[#subexp-i]
+  end
+
+  local job = operatorJob(operator)
+  local result = job(table.unpack(args))
+
+  -- Return the unused elements of the subexpression
+  -- And return the result.
+  local resultElements = {}
+  for i=#subexp-(numArgs+1),1,-1 do
+    resultElements[#resultElements+1] = subexp[i]
+  end
+  resultElements[#resultElements+1] = result
+
+  printTable("Results of subexpression", resultElements)
+
+  return resultElements
+end
+
+function pushToStack(stack, elements)
+  -- Cheating by not treating stack as immutable
+  for _, element in ipairs(elements) do
+    table.insert(stack, 1, element)
+  end
+  return stack
+end
+
+
+--[[
+  Functions used to define the behaviour of the various tokens involved in the expressions
+]]
+
+--- Determine whether or not the token is an operator or an operand
+-- @param token The token being checked
+-- @return The type of the token: "operator" or "operand"
+function tokenType(token)
+  if tonumber(token) == 0 or tonumber(token) == 1 then
+    return "operand"
+  else
+    return "operator"
+  end
 end
 
 function operatorArity(operator)
@@ -86,38 +138,70 @@ end
 
 function operatorJob(operator)
 
-  local function tobool(num)
-    return tonumber(anum)
+  local function tobool(anum)
+    return (tonumber(anum) == 1)
   end
 
   local job = {
     A = function(a, b)
       if tobool(a) and tobool(b) then
-        return true
+        return 1
       else
-        return false
+        return 0
       end
     end,
     R = function(a, b)
       if tobool(a) or tobool(b) then
-        return true
+        return 1
       else
-       return false 
+       return 0
       end
     end,
     X = function(a, b)
       if tobool(a) and not(tobool(b)) then
-        return true
+        return 1
       elseif not(tobool(a)) and tobool(b) then
-        return true
+        return 1
       else
-        return false
+        return 0
       end
     end,
     N = function(a)
-      return not(tobool(a))
+      local boolresult = not(tobool(a))
+      if boolresult then 
+        return 1
+      else 
+        return  0
+      end
     end
   }
 
-  return job[operator]()
+  return job[operator]
 end
+
+
+--[[
+  Testing, Testing
+]]
+
+function testExpressions()
+  local test = {
+    {"0 1 R",             true},
+    {"0 0 R",             false},
+    {"1 0 A 1 R N N",     true},
+    {"0 0 A 0 N 0 N A R", true},
+    {"0 1 A 0 N 1 N A R", false},
+    --{"1 0 A 1 N 0 N A R", false},
+    {"1 1 A 1 N 1 N A R", true},
+    {"1 1 A 1 N 1 N A X", true},
+    {"1 1 A 0 N 0 N A X", false}
+  }
+  
+  for _, v in ipairs(test) do
+    local result = evaluateExpression(tokeniseExpression(v[1]))
+    local expectedResult = v[2]
+    assert(result == expectedResult)
+  end 
+end
+
+testExpressions()
