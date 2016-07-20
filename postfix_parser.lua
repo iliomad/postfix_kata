@@ -92,8 +92,8 @@ function evaluateSubexpression(subexp)
   -- Return the unused elements of the subexpression
   -- And return the result.
   local resultElements = {}
-  for i=#subexp-(numArgs+1),1,-1 do
-    resultElements[#resultElements+1] = subexp[i]
+  for i=1, #subexp-(numArgs+1) do
+    resultElements[i] = subexp[i]
   end
   resultElements[#resultElements+1] = result
 
@@ -104,8 +104,8 @@ end
 
 function pushToStack(stack, elements)
   -- Cheating by not treating stack as immutable
-  for _, element in ipairs(elements) do
-    table.insert(stack, 1, element)
+  for i = #elements,1,-1 do
+    table.insert(stack, 1, elements[i])
   end
   return stack
 end
@@ -191,7 +191,7 @@ function testExpressions()
     {"1 0 A 1 R N N",     true},
     {"0 0 A 0 N 0 N A R", true},
     {"0 1 A 0 N 1 N A R", false},
-    --{"1 0 A 1 N 0 N A R", false},
+    {"1 0 A 1 N 0 N A R", false},
     {"1 1 A 1 N 1 N A R", true},
     {"1 1 A 1 N 1 N A X", true},
     {"1 1 A 0 N 0 N A X", false}
