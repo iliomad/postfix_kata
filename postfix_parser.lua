@@ -36,7 +36,7 @@ function makeStack()
   local stack = {}
   local interface = {
     pop = function()
-      val = stack[1]
+      local val = stack[1]
       table.remove(stack, 1)
       return val
     end,
