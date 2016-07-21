@@ -1,121 +1,50 @@
---[[
-  First Lua progam in a quite a while.
-  Purpose: Parse and evaluate a boolean postfix expression
-]]
+ 
+function evaluateExpression(expStr)
 
-
--- ARRGH GLOBALS
-DEBUG = false
-TEST = false
-
-function printTable(name, someTable)
-  if DEBUG then print(name .. ": " .. table.concat(someTable, ",") .. ".\n") end 
-end
-
-
---[[
-  Functions concerned with loading in the expression information
-]]
-
-function tokeniseExpression(line)
-  local tokens = {}
-  for word in line:gmatch("%S+") do
-    table.insert(tokens, word)
+  local function tokeniseExpression(exp)
+    local tokens = {}
+    for word in exp:gmatch("%S+") do
+      table.insert(tokens, word)
+    end
+    return tokens
   end
-  return tokens
-end
 
+  local stack = makeStack()
 
---[[
-  The loaded expression is modelled as a stack.
-  These functions manipulate the stack to evaluate expressions.
-]]
-
-function evaluateExpression(stack)
-  printTable("Current stack", stack)
-  if #stack == 1 then
-    local result = stack[1]
-    if result == 0 then
-      return false
+  for _, token in ipairs(tokeniseExpression(expStr)) do
+    if token == "0" then
+      stack.push(false)
+    elseif token == "1" then
+      stack.push(true)
     else
-      return true
-    end
-  else
-    local poppedStack, subexpression = popToOperator(stack)
-    local result = evaluateSubexpression(subexpression)
-    local newStack = pushToStack(poppedStack, result)
-    return evaluateExpression(newStack)
-  end
-end
-
-function popToOperator(stack)
-  local subexp = {}
-  local poppedTo = 1
-  for stackPosition, token in ipairs(stack) do
-    poppedTo = stackPosition
-    subexp[#subexp+1] = token
-    if tokenType(token) == "operator" then
-      break
+      -- Assume it's an operator
+      local op = {}
+      for i=1,operatorArity(token) do
+        op[#op+1] = stack.pop()
+      end
+      local job = operatorJob(token)
+      local result = job(table.unpack(op))
+      stack.push(result)
     end
   end
 
-  local poppedStack = {}
-  for i=poppedTo+1,#stack do
-    poppedStack[#poppedStack+1] = stack[i]
-  end
-
-  printTable("Popped stack", poppedStack)
-  printTable("Subexpression", subexp)
-
-  return poppedStack, subexp
+  return stack.pop()
 end
 
-function evaluateSubexpression(subexp)
-	local operator = subexp[#subexp]
-  local numArgs = operatorArity(operator)
-  local args = {}
-  for i=1,numArgs do
-    args[i] = subexp[#subexp-i]
-  end
-
-  local job = operatorJob(operator)
-  local result = job(table.unpack(args))
-
-  -- Return the unused elements of the subexpression
-  -- And return the result.
-  local resultElements = {}
-  for i=1, #subexp-(numArgs+1) do
-    resultElements[i] = subexp[i]
-  end
-  resultElements[#resultElements+1] = result
-
-  printTable("Results of subexpression", resultElements)
-
-  return resultElements
-end
-
-function pushToStack(stack, elements)
-  -- Cheating by not treating stack as immutable
-  for i = #elements,1,-1 do
-    table.insert(stack, 1, elements[i])
-  end
-  return stack
-end
-
-
---[[
-  Functions used to define the behaviour of the various tokens involved in the expressions
-]]
-
---- Determine whether or not the token is an operator or an operand
--- @param token The token being checked
--- @return The type of the token: "operator" or "operand"
-function tokenType(token)
-  if tonumber(token) == 0 or tonumber(token) == 1 then
-    return "operand"
-  else
-    return "operator"
-  end
+-- Playing with a closure
+function makeStack()
+  local stack = {}
+  local interface = {
+    pop = function()
+      val = stack[1]
+      table.remove(stack, 1)
+      return val
+    end,
+    push = function(val)
+      table.insert(stack, 1, val)
+    end
+  }
+  return interface
 end
 
 function operatorArity(operator)
@@ -129,55 +58,26 @@ function operatorArity(operator)
 end
 
 function operatorJob(operator)
-
-  local function tobool(anum)
-    return (tonumber(anum) == 1)
-  end
-
   local job = {
     A = function(a, b)
-      if tobool(a) and tobool(b) then
-        return 1
-      else
-        return 0
-      end
+      return a and b
     end,
     R = function(a, b)
-      if tobool(a) or tobool(b) then
-        return 1
-      else
-       return 0
-      end
+      return a or b
     end,
     X = function(a, b)
-      if tobool(a) and not(tobool(b)) then
-        return 1
-      elseif not(tobool(a)) and tobool(b) then
-        return 1
-      else
-        return 0
-      end
+      -- Thanks for the tip :)
+      return a ~= b
     end,
     N = function(a)
-      local boolresult = not(tobool(a))
-      if boolresult then 
-        return 1
-      else 
-        return  0
-      end
+      return not a
     end
   }
-
   return job[operator]
 end
 
-
---[[
-  Testing, Testing
-]]
-
-function testExpressions()
-  local test = {
+function runTestExpressions()
+  local testExpressions = {
     {"0 1 R",             true},
     {"0 0 R",             false},
     {"1 0 A 1 R N N",     true},
@@ -188,25 +88,13 @@ function testExpressions()
     {"1 1 A 1 N 1 N A X", true},
     {"1 1 A 0 N 0 N A X", false}
   }
-  
-  for _, v in ipairs(test) do
-    local result = evaluateExpression(tokeniseExpression(v[1]))
-    local expectedResult = v[2]
-    assert(result == expectedResult)
-  end 
-end
 
-if TEST then 
-  testExpressions() 
-else
-  if #arg then
-    for i, v in ipairs(arg) do
-      if i > 0 then
-        local result  = evaluateExpression(tokeniseExpression(v))
-        print(v .. " evaluates to : " .. tostring(result))
-      end 
-    end
+  for _, v in ipairs(testExpressions) do
+    local result = evaluateExpression(v[1])
+    local expectedResult = v[2]
+    print("Evaluating " .. v[1] .. " ... " .. tostring(result))
+    assert(result == expectedResult)
   end
 end
 
-
+runTestExpressions()
