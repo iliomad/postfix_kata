@@ -23,7 +23,6 @@ space = lpeg.S(" \t\n\r")
 ]]
 operand = lpeg.R("01")^1 / tostring
 operand_or_space = operand + space
-print(operand_or_space)
 
 extract_ops = lpeg.Ct(operand_or_space^0)
 optable = extract_ops:match("0    1 2")
