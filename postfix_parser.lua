@@ -67,7 +67,7 @@ function operatorJob(operator)
     end,
     X = function(a, b)
       -- Thanks for the tip :)
-      return a ~= b
+      return a ~= 
     end,
     N = function(a)
       return not a

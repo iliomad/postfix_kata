@@ -8,17 +8,14 @@ tokeniseExpression(ExpStr) ->
 evaluateExpression([], Eval) ->
     [Result] = Eval,
     Result;
-evaluateExpression(Exp, Eval) ->
-    % Get head of list 
-    [H|T] = Exp,
-    case H of 
-        "0" -> evaluateExpression(T, [false | Eval]);
-        "1" -> evaluateExpression(T, [true | Eval]);
-        Operator ->
-            Result = applyOperator(Operator, Eval),
-            evaluateExpression(T, Result)
-    end.
-
+evaluateExpression(["0"|T], Eval) ->
+    evaluateExpression(T, [false | Eval]);
+evaluateExpression(["1"|T], Eval) ->
+    evaluateExpression(T, [true | Eval]);
+evaluateExpression([Operator|T], Eval) ->
+    % This is an operator
+    Result = applyOperator(Operator, Eval),
+    evaluateExpression(T, Result).
 
 applyOperator(Operator, Eval) ->
     case Operator of 
