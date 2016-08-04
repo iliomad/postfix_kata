@@ -6,36 +6,35 @@ tokeniseExpression(ExpStr) ->
     % Erlang can't tell the difference between a list of integers and a string.
     string:tokens(ExpStr, " ").
 
-evaluateExpression([], Eval, _) ->
+evaluateExpression([], Eval) ->
     [Result] = Eval,
     Result;
-evaluateExpression(["0"|T], Eval, OpMap) ->
-    evaluateExpression(T, [false | Eval], OpMap);
-evaluateExpression(["1"|T], Eval, OpMap) ->
-    evaluateExpression(T, [true | Eval], OpMap);
-evaluateExpression([Operator|T], Eval, OpMap) ->
+evaluateExpression(["0"|T], Eval) ->
+    evaluateExpression(T, [false | Eval]);
+evaluateExpression(["1"|T], Eval) ->
+    evaluateExpression(T, [true | Eval]);
+evaluateExpression([Operator|T], Eval) ->
     % This is an operator
-    Result = applyOperator(Operator, Eval, OpMap),
-    evaluateExpression(T, Result, OpMap).
+    Result = applyOperator(Operator, Eval),
+    evaluateExpression(T, Result).
 
-applyOperator(Operator, Eval, OpMap) ->
-    OperatorFun = maps:get(list_to_atom(Operator), OpMap),
-    {_,Arity} = erlang:fun_info(OperatorFun, arity),
+applyOperator(Operator, Eval) ->
+    {Arity, OperatorFun} = operatorInfo(Operator),
     {Args, Rest} = lists:split(Arity,Eval),
-    Result = erlang:apply(OperatorFun, Args),
-    [Result|Rest].
+    [erlang:apply(OperatorFun, Args)|Rest].
 
-operatorInfo() ->
-     #{
-        'A' => fun(A,B) -> A and B end,
-        'R' => fun(A,B) -> A or B end,
-        'X' => fun(A,B) -> A xor B end,
-        'N' => fun(A) -> not A end
-      }.
+operatorInfo(Operator) ->
+    OpMap = #{
+        'A' => {2, fun(A,B) -> A and B end},
+        'R' => {2, fun(A,B) -> A or B end},
+        'X' => {2, fun(A,B) -> A xor B end},
+        'N' => {1, fun(A) -> not A end}
+      },
+    maps:get(list_to_atom(Operator), OpMap).
 
 
 parseExpression(ExpStr) ->
-    Result = evaluateExpression(tokeniseExpression(ExpStr), [], operatorInfo()),
+    Result = evaluateExpression(tokeniseExpression(ExpStr), []),
     io:format("~s: ~p\n", [ExpStr, Result]),
     Result.
 
