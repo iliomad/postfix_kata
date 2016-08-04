@@ -2,8 +2,6 @@
 -export([parseExpression/1, runTestExpressions/0]).
 
 tokeniseExpression(ExpStr) ->
-    % Returns a list of tokens
-    % Erlang can't tell the difference between a list of integers and a string.
     string:tokens(ExpStr, " ").
 
 evaluateExpression([], Eval) ->
@@ -14,7 +12,6 @@ evaluateExpression(["0"|T], Eval) ->
 evaluateExpression(["1"|T], Eval) ->
     evaluateExpression(T, [true | Eval]);
 evaluateExpression([Operator|T], Eval) ->
-    % This is an operator
     Result = applyOperator(Operator, Eval),
     evaluateExpression(T, Result).
 
