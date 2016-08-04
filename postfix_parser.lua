@@ -17,13 +17,13 @@ function evaluateExpression(expStr)
     elseif token == "1" then
       stack.push(true)
     else
-      -- Assume it's an operator
-      local op = {}
-      for i=1,operatorArity(token) do
-        op[#op+1] = stack.pop()
+      -- Assume the token is an operator
+      local operator = operatorInfo(token)
+      local operands = {}
+      for i=1,operator.arity do
+        operands[#operands+1] = stack.pop()
       end
-      local job = operatorJob(token)
-      local result = job(table.unpack(op))
+      local result = operator.fun(table.unpack(operands))
       stack.push(result)
     end
   end
@@ -47,33 +47,14 @@ function makeStack()
   return interface
 end
 
-function operatorArity(operator)
-  local arity = {
-    A = 2,
-    R = 2,
-    X = 2,
-    N = 1
+function operatorInfo(operator)
+  local info = {
+    A = {arity = 2, fun = function(a, b) return a and b end},
+    R = {arity = 2, fun = function(a, b) return a or b end},
+    X = {arity = 2, fun = function(a, b) return a ~= b end},
+    N = {arity = 1, fun = function(a) return not a end}
   }
-  return arity[operator]
-end
-
-function operatorJob(operator)
-  local job = {
-    A = function(a, b)
-      return a and b
-    end,
-    R = function(a, b)
-      return a or b
-    end,
-    X = function(a, b)
-      -- Thanks for the tip :)
-      return a ~= 
-    end,
-    N = function(a)
-      return not a
-    end
-  }
-  return job[operator]
+  return info[operator]
 end
 
 function runTestExpressions()
@@ -92,8 +73,7 @@ function runTestExpressions()
   for _, v in ipairs(testExpressions) do
     local result = evaluateExpression(v[1])
     local expectedResult = v[2]
-    print("Evaluating " .. v[1] .. " ... " .. tostring(result))
-    assert(result == expectedResult)
+    print(v[1] .. " = " .. tostring(result) .. ". Expected: " .. tostring(expectedResult))
   end
 end
 
