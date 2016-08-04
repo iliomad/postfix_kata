@@ -12,8 +12,7 @@ evaluateExpression(["0"|T], Eval) ->
 evaluateExpression(["1"|T], Eval) ->
     evaluateExpression(T, [true | Eval]);
 evaluateExpression([Operator|T], Eval) ->
-    Result = applyOperator(Operator, Eval),
-    evaluateExpression(T, Result).
+    evaluateExpression(T, applyOperator(Operator, Eval)).
 
 applyOperator(Operator, Eval) ->
     {Arity, OperatorFun} = operatorInfo(Operator),
