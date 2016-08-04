@@ -17,7 +17,7 @@ evaluateExpression([Operator|T], Eval) ->
 applyOperator(Operator, Eval) ->
     {Arity, OperatorFun} = operatorInfo(Operator),
     {Args, Rest} = lists:split(Arity,Eval),
-    [erlang:apply(OperatorFun, Args)|Rest].
+    [erlang:apply(OperatorFun, lists:reverse(Args))|Rest].
 
 operatorInfo(Operator) ->
     % For better reuse, the operator functions could be placed in a separate module
