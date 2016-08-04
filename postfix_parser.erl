@@ -21,6 +21,8 @@ applyOperator(Operator, Eval) ->
     [erlang:apply(OperatorFun, Args)|Rest].
 
 operatorInfo(Operator) ->
+    % For better reuse, the operator functions could be placed in a separate module
+    % and use Erlang's module introspection to match desired operator with its implementation.
     OpMap = #{
         'A' => {2, fun(A,B) -> A and B end},
         'R' => {2, fun(A,B) -> A or B end},
@@ -45,9 +47,10 @@ runTestExpressions() ->
              {"1 1 A 1 N 1 N A X", true},
              {"1 1 A 0 N 0 N A X", false}
             ],
-    ParseAndPrint = fun(E) ->
-                            Result = parseExpression(E),
-                            io:format("~s: ~p\n", [E, Result]),
-                            Result
-                    end,
-    [ParseAndPrint(E) =:= Result || {E, Result} <- Tests].
+    ParseAndPrint = fun(Expression, Expected) ->
+       Result = parseExpression(Expression),
+       io:format("~s = ~p. Expected: ~p\n", [Expression, Result, Expected]),
+       Result
+    end,
+    [ParseAndPrint(Expression, Expected) || {Expression, Expected} <- Tests],
+    ok. 
