@@ -31,9 +31,7 @@ operatorInfo(Operator) ->
 
 
 parseExpression(ExpStr) ->
-    Result = evaluateExpression(tokeniseExpression(ExpStr), []),
-    io:format("~s: ~p\n", [ExpStr, Result]),
-    Result.
+    evaluateExpression(tokeniseExpression(ExpStr), []).
 
 
 runTestExpressions() ->
@@ -47,4 +45,9 @@ runTestExpressions() ->
              {"1 1 A 1 N 1 N A X", true},
              {"1 1 A 0 N 0 N A X", false}
             ],
-    [parseExpression(E) =:= Result || {E, Result} <- Tests].
+    ParseAndPrint = fun(E) ->
+                            Result = parseExpression(E),
+                            io:format("~s: ~p\n", [E, Result]),
+                            Result
+                    end,
+    [ParseAndPrint(E) =:= Result || {E, Result} <- Tests].
