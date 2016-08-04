@@ -1,5 +1,5 @@
 -module(postfix_parser).
--export([parseExpression/1, runTestExpressions/0]).
+-export([evaluateExpression/1, runTestExpressions/0]).
 
 tokeniseExpression(ExpStr) ->
     string:tokens(ExpStr, " ").
@@ -31,7 +31,7 @@ operatorInfo(Operator) ->
     maps:get(list_to_atom(Operator), OpMap).
 
 
-parseExpression(ExpStr) ->
+evaluateExpression(ExpStr) ->
     evaluateExpression(tokeniseExpression(ExpStr), []).
 
 
@@ -46,10 +46,10 @@ runTestExpressions() ->
              {"1 1 A 1 N 1 N A X", true},
              {"1 1 A 0 N 0 N A X", false}
             ],
-    ParseAndPrint = fun(Expression, Expected) ->
-       Result = parseExpression(Expression),
+    EvalAndPrint = fun(Expression, Expected) ->
+       Result = evaluateExpression(Expression),
        io:format("~s = ~p. Expected: ~p\n", [Expression, Result, Expected]),
        Result
     end,
-    [ParseAndPrint(Expression, Expected) || {Expression, Expected} <- Tests],
+    [EvalAndPrint(Expression, Expected) || {Expression, Expected} <- Tests],
     ok. 
